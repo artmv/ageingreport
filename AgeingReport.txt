@@ -1,0 +1,221 @@
+Sub AgeingReport()
+'For Visma7 report: "Payables list by invoice/invoice issuer"
+
+'1. add new tab
+    Sheets("Sheet1").Select
+    Sheets("Sheet1").Copy Before:=Sheets(1)
+    Sheets("Sheet1 (2)").Select
+    Sheets("Sheet1 (2)").Name = "Ageing"
+
+'2. unmerge cells
+    Cells.Select
+    Selection.UnMerge
+
+'3. remove top rows
+    Rows("2:10").Select
+    Selection.Delete Shift:=xlUp
+    
+'3. cut-paste the date
+    Range("T1").Select
+    Selection.Cut
+    Range("V1").Select
+    ActiveSheet.Paste
+    
+'4. remove columns
+    Range("B:B,D:F,H:H,J:J,L:L,O:P,R:S,U:U,W:X").Select
+    Selection.Delete Shift:=xlToLeft
+
+'5. filter out "total" rows
+    Cells.Select
+    Selection.AutoFilter
+    ActiveSheet.Range("A1:J2000").AutoFilter Field:=1, Criteria1:="="
+    ActiveCell.Offset(1, 0).Select
+    Range(Selection, Selection.End(xlDown)).Select
+    Selection.Delete Shift:=xlUp
+    Selection.AutoFilter
+    
+'6. filter out "total" rows
+    Cells.Select
+    Selection.AutoFilter
+    ActiveSheet.Range("A1:J2000").AutoFilter Field:=1, Criteria1:="*total*"
+    ActiveCell.Offset(1, 0).Select
+    Range(Selection, Selection.End(xlDown)).Select
+    Selection.Delete Shift:=xlUp
+    Selection.AutoFilter
+
+'7 Make "companies" colimn
+    Columns("A:A").Select
+    Selection.Copy
+    Selection.Insert Shift:=xlToRight
+    Cells.Select
+    Selection.AutoFilter
+    ActiveSheet.Range("A1:J2000").AutoFilter Field:=1, Criteria1:=">" & CDbl([datecell])
+    ActiveCell.Offset(1, 0).Select
+    Range(Selection, Selection.End(xlDown)).Select
+    Selection.ClearContents
+    Selection.AutoFilter
+    
+'8 Copy 'companies names'
+    Range("A1").Select
+    Dim x As Long
+    For x = 1 To 100
+       Selection.Copy
+       Selection.End(xlDown).Select
+          If ActiveCell = "" Then
+             Exit For
+          Else
+             ActiveCell.Offset(-1, 0).Select
+             Range(Selection, Selection.End(xlUp)).Select
+             ActiveSheet.Paste
+             Selection.End(xlDown).Select
+          End If
+    Next x
+    
+'9. filter out empty rows
+    Cells.Select
+    Selection.AutoFilter
+    ActiveSheet.Range("A1:J2000").AutoFilter Field:=11, Criteria1:="="
+    Range("A2").Select
+    Range(Selection, Selection.End(xlDown)).Select
+    Rows("2:2000").Select
+    Selection.Delete Shift:=xlUp
+    Selection.AutoFilter   
+    
+'10. column for overdue days
+    Columns("F:F").Select
+    Selection.Insert Shift:=xlToRight, CopyOrigin:=xlFormatFromLeftOrAbove
+    Range("F2").Select
+    ActiveCell.FormulaR1C1 = "=R1C12-RC[-1]"
+    
+    Selection.Copy
+    ActiveCell.Offset(0, -1).Select
+    Selection.End(xlDown).Select
+    ActiveCell.Offset(0, 1).Select
+    Range(Selection, Selection.End(xlUp)).Select
+    ActiveSheet.Paste
+    Columns("F:F").Select
+    Selection.NumberFormat = "General"
+      
+'11. column for credit days
+    Columns("F:F").Select
+    Selection.Insert Shift:=xlToRight, CopyOrigin:=xlFormatFromLeftOrAbove
+    Range("F2").Select
+    ActiveCell.FormulaR1C1 = "=RC[-1]-RC[-4]"
+    
+    Selection.Copy
+    ActiveCell.Offset(0, -1).Select
+    Selection.End(xlDown).Select
+    ActiveCell.Offset(0, 1).Select
+    Range(Selection, Selection.End(xlUp)).Select
+    ActiveSheet.Paste
+    Columns("F:F").Select
+    Selection.NumberFormat = "General"
+   
+'12. add formulas
+    Range("N2").Select
+    ActiveCell.FormulaR1C1 = "=IF(RC[-7]<=0,RC[-1],)"
+    Range("O2").Select
+    ActiveCell.FormulaR1C1 = "=IF(AND(RC[-8]>0,RC[-8]<=30),RC[-2],)"
+    Range("P2").Select
+    ActiveCell.FormulaR1C1 = "=IF(AND(RC[-9]>=31,RC[-9]<=60),RC[-3],)"
+    Range("Q2").Select
+    ActiveCell.FormulaR1C1 = "=IF(AND(RC[-10]>=61,RC[-10]<=90),RC[-4],)"
+    Range("R2").Select
+    ActiveCell.FormulaR1C1 = "=IF(AND(RC[-11]>=91,RC[-11]<=120),RC[-5],)"
+    Range("S2").Select
+    ActiveCell.FormulaR1C1 = "=IF(RC[-12]>120,RC[-6],)"
+    Range("T2").Select
+    ActiveCell.FormulaR1C1 = "=SUM(RC[-6]:RC[-1])-RC[-7]"
+    
+'13. copy formulas
+    Range("N2:T2").Select
+    Selection.Copy
+    ActiveCell.Offset(0, -1).Select
+    Selection.End(xlDown).Select
+    ActiveCell.Offset(0, 1).Select
+    ActiveSheet.Paste
+    Selection.Copy
+    Range(Selection, Selection.End(xlUp)).Select
+    ActiveSheet.Paste
+    
+'14. add headings
+    Range("A2").EntireRow.Insert
+    Range("A2").Value = "Company"
+    Range("B2").Value = "Date"
+    Range("C2").Value = "Invoice #"
+    Range("D2").Value = "Document"
+    Range("E2").Value = "Due date"
+    Range("F2").Value = "Credit days"
+    Range("G2").Value = "Overdue days"
+    Range("H2").Value = "Invoice, CUR"
+    Range("I2").Value = "Currency"
+    Range("J2").Value = "Ex-rate"
+    Range("K2").Value = "Invoice, EUR"
+    Range("L2").Value = "Payments, EUR"
+    Range("M2").Value = "Unpaid, EUR"
+    Range("N2").Value = "Not overdue"
+    Range("O2").Value = "up to 30 days"
+    Range("P2").Value = "31-60 days"
+    Range("Q2").Value = "61-90 days"
+    Range("R2").Value = "91-120 days"
+    Range("S2").Value = "> 120 days"
+    
+'16. add totals
+    Range("K3").Select
+    Selection.End(xlDown).Select
+    ActiveCell.Offset(1, 0).Select
+    ActiveCell.FormulaR1C1 = "=SUM(R[" & lastrow - 1 & "]C:R3C11)"
+    ActiveCell.Offset(0, 1).Select
+    ActiveCell.FormulaR1C1 = "=SUM(R[" & lastrow - 1 & "]C:R3C12)"
+    ActiveCell.Offset(0, 1).Select
+    ActiveCell.FormulaR1C1 = "=SUM(R[" & lastrow - 1 & "]C:R3C13)"
+    ActiveCell.Offset(0, 1).Select
+    ActiveCell.FormulaR1C1 = "=SUM(R[" & lastrow - 1 & "]C:R3C14)"
+    ActiveCell.Offset(0, 1).Select
+    ActiveCell.FormulaR1C1 = "=SUM(R[" & lastrow - 1 & "]C:R3C15)"
+    ActiveCell.Offset(0, 1).Select
+    ActiveCell.FormulaR1C1 = "=SUM(R[" & lastrow - 1 & "]C:R3C16)"
+    ActiveCell.Offset(0, 1).Select
+    ActiveCell.FormulaR1C1 = "=SUM(R[" & lastrow - 1 & "]C:R3C17)"
+    ActiveCell.Offset(0, 1).Select
+    ActiveCell.FormulaR1C1 = "=SUM(R[" & lastrow - 1 & "]C:R3C18)"
+    ActiveCell.Offset(0, 1).Select
+    ActiveCell.FormulaR1C1 = "=SUM(R[" & lastrow - 1 & "]C:R3C19)"
+    ActiveCell.Offset(0, 1).Select
+    ActiveCell.FormulaR1C1 = "=SUM(R[" & lastrow - 1 & "]C:R3C20)"
+
+'17. final formatting
+    Cells.Select
+    With Selection.Font
+        .Name = "Arial"
+        .Size = 10
+        .Bold = False
+    End With
+    Selection.Borders(xlLeft).LineStyle = xlNone
+    Selection.Borders(xlRight).LineStyle = xlNone
+    Selection.Borders(xlTop).LineStyle = xlNone
+    Selection.Borders(xlBottom).LineStyle = xlNone
+    
+    Rows("2:2").Select
+    Selection.Font.Bold = True
+    Range("K3").Select
+    Range(Selection, Selection.End(xlDown)).Select
+    Range(Selection, Selection.End(xlToRight)).Select
+    Selection.Style = "Comma"
+    
+    Range("K3").Select
+    Selection.End(xlDown).Select
+    Range(Selection, Selection.End(xlToRight)).Select
+    Selection.Font.Bold = True
+    
+    Columns("T:T").Select
+    With Selection.Font
+        .Color = -16776961
+    End With
+            
+    Cells.Select
+    ActiveWindow.Zoom = 70
+    Cells.EntireColumn.AutoFit
+    Cells.EntireRow.AutoFit    
+   
+End Sub
